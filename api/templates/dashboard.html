@@ -1,0 +1,219 @@
+{% extends 'index.html' %} {% block content%} {% load static %}
+{% load rest_framework %}
+
+<div class="container dashboard-wrapper">
+    <!-- {% for task in serializer %}
+    {{task.is_completed}}
+    {% endfor %} -->
+    <!-- <form id="create-form" action="" method="POST">
+        {% csrf_token %}
+        {% render_form serializer %}
+        <input type="submit" value="Save">
+    </form> -->
+    <form id="update-form" class="form-inline">
+        {% csrf_token %}
+        <div class="inside-form">
+        {% render_form serializer %}
+        <input type="submit" class="btn  btn-outline-danger" value="Add">
+
+        </div>
+    </form>
+    <hr>
+    <div class="color-strip">
+        <label >Last Date :&nbsp;</label>
+        <label id="task-last-date"></label>
+        <label >Completed :&nbsp;</label>
+        <label id="task-completed"></label>
+        <label >Missed :&nbsp;</label>
+        <label id="task-missed"></label>
+
+    </div>
+    <div class="task-list">
+        {% for task in tasks %}
+
+            <div class="wrapper" data-id="{{task.id}}" data-is_completed="{{task.is_completed}}" data-due_date="{{task.due_date|date:"Y-m-d"}}" >
+                
+                <div class="task-detail" style="flex: 14;"data-id="{{task.id}}" data-task="{{task.task}}" data-is_completed="{{task.is_completed}}">
+                {% if task.is_completed %}
+                <strike >{{ task.task }}</strike>
+                {% else %}
+                <label >{{ task.task }}</label>
+                {% endif %}
+                <br>
+                <small>
+                Due Date : {{ task.due_date|date:"d M, Y" }}
+                </small>
+                </div>
+                
+                <div style="flex: 1;">
+					<!-- <button class="btn btn-sm btn-outline-info edit" data-id="{{task.id}}" data-task="{{task.task}}" data-is_completed="{{task.is_completed}}" data-due_date="{{task.due_date|date:"Y-m-d"}}">Edit </button> -->
+                    <i class="fa fa-edit edit" data-id="{{task.id}}" data-task="{{task.task}}" data-is_completed="{{task.is_completed}}" data-due_date="{{task.due_date|date:"Y-m-d"}}"></i>
+                </div>
+                <div style="flex: 1;">
+					<!-- <button class="btn btn-sm btn-outline-danger delete">Delete</button> -->
+                    <i class="fa fa-trash delete" data-id="{{task.id}}"></i>
+                </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+<script type="text/javascript">
+function getCookie(name) {
+	    var cookieValue = null;
+	    if (document.cookie && document.cookie !== '') {
+	        var cookies = document.cookie.split(';');
+	        for (var i = 0; i < cookies.length; i++) {
+	            var cookie = cookies[i].trim();
+	            // Does this cookie string begin with the name we want?
+	            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+	                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+	                break;
+	            }
+	        }
+	    }
+	    return cookieValue;
+	}
+var csrftoken = getCookie('csrftoken');
+var d = new Date();
+var m = d.getMonth()+1;
+
+var date = d.getFullYear() +'-0'+m+'-'+d.getDate()
+        
+function colorChecked(){
+    document.querySelectorAll('.wrapper').forEach(ele=>{
+        // console.log(date);
+        if(ele.dataset.is_completed=="True"){
+            ele.style.backgroundColor='#0be88194';
+        }
+        else if(ele.dataset.due_date==date){
+            ele.style.backgroundColor='#ff5e57';
+        }
+        else if(ele.dataset.due_date<date){
+            ele.style.backgroundColor='#ffdd59';
+        }
+        
+    })
+}
+colorChecked();
+document.querySelectorAll('.edit').forEach(ele=>{
+    
+    ele.addEventListener('click',function(){
+        // console.log(document.getElementsByName('task'));
+        // console.log(document.getElementsByName('due_date'));
+
+        var check=true
+        if (this.dataset.is_completed=="False")
+            check=false
+        document.getElementsByName('task')[0].value = this.dataset.task
+        document.getElementsByName('task')[0].dataset.id = this.dataset.id;
+        document.getElementsByName('is_completed')[0].checked = check
+        document.getElementsByName('due_date')[0].value = this.dataset.due_date
+        
+    })
+})
+var form = document.getElementById('update-form')
+    form.addEventListener('submit',function(e){
+        e.preventDefault()
+        var task=document.getElementsByName('task')[0].value
+        var id = document.getElementsByName('task')[0].dataset.id
+        var is_completed=document.getElementsByName('is_completed')[0].checked
+        var due_date=document.getElementsByName('due_date')[0].value
+        // console.log(id);
+
+        if (task==""){
+            alert("Task is Empty!")
+        }
+        else if (due_date==""){
+            alert("Due Date is Empty!")
+        }
+        else if(due_date<date){
+            alert("Date cant be before today!!")
+        }
+        else if(id==undefined){
+            url = `http://127.0.0.1:8000/task-list/`
+            
+            fetch(url,{
+                method:"POST",
+                headers:{
+                    'Content-type':'application/json',
+                    'X-CSRFToken':csrftoken,
+                },
+                body:JSON.stringify({
+                    'task':task,
+                    'is_completed':is_completed,
+                    'due_date':due_date,
+                    
+                })
+            })
+            .then(
+                location.reload()
+                )
+            
+        
+        }
+        else{
+            url = `http://127.0.0.1:8000/api/task-detail/${id}`
+            
+            fetch(url,{
+                method:"PUT",
+                headers:{
+                    'Content-type':'application/json',
+                    'X-CSRFToken':csrftoken,
+                },
+                body:JSON.stringify({
+                    'task':task,
+                    'is_completed':is_completed,
+                    'due_date':due_date,
+                    
+                })
+            })
+            .then(response => response.json())
+            .then(function(result){
+                // console.log(result);
+                location.reload()
+
+            })
+        }
+    })
+    document.querySelectorAll('.delete').forEach(ele=>{
+        ele.addEventListener('click',function(){
+            if(confirm("Are you sure, Wanna delete?")){
+                // console.log(this.dataset.id);
+                url = `http://127.0.0.1:8000/api/task-detail/${this.dataset.id}`
+            
+            fetch(url,{
+                method:"DELETE",
+                headers:{
+                    'Content-type':'application/json',
+                    'X-CSRFToken':csrftoken,
+                },
+            })
+            .then(location.reload())
+            }
+        })
+    })
+    document.querySelectorAll('.task-detail').forEach(ele=>{
+        ele.addEventListener('click',function(){    
+                if(ele.dataset.is_completed=="True")
+                var is_completed=false
+                else
+                var is_completed=true
+                    
+                url = `http://127.0.0.1:8000/api/task-detail/${this.dataset.id}`
+                fetch(url,{
+                    method:"PUT",
+                    headers:{
+                        'Content-type':'application/json',
+                        'X-CSRFToken':csrftoken,
+                    },
+                    body:JSON.stringify({
+                        'is_completed':is_completed,                            
+                    })
+                })
+                .then(location.reload())
+                
+            })
+    })
+</script>
+{% endblock %}
